@@ -1,8 +1,14 @@
 import os
 import argparse
 import base64
+import time
+import requests
 
 import hashlib
+
+from datetime import datetime
+from PIL import Image
+from io import BytesIO
 
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -14,6 +20,7 @@ from selenium.webdriver.common.keys import Keys
 from google_images_download import google_images_download  # importing the library
 
 URL_GOOGLE = "https://www.google.com/imghp?sbi=1"
+URL_UNSPLASH = "https://unsplash.com"
 
 ROOT_DIR = os.path.join(os.getcwd(), "")
 
@@ -24,6 +31,10 @@ def image_to_data_url(filename):
     with open(filename, 'rb') as f:
         img = f.read()
     return prefix + base64.b64encode(img).decode('utf-8')
+
+
+def generate_datetimestr():
+    return datetime.now().strftime("%Y-%m-%d %H_%M_%S")
 
 
 def getUserInput():
@@ -40,7 +51,7 @@ def getUserInput():
     parser.add_argument(
         '-rd', '--removedupe', help='remove duplicate images', required=False, action='store_true')
     parser.add_argument(
-        '-m', '--mode', help='which site to download (google, unsplash, both)', type=str, required=False, choices=['g', 'u', 'b'])
+        '-m', '--mode', help='which site to download (google, unsplash, both)', required=False, choices=['g', 'u', 'b'])
     parser.add_argument(
         '-k', '--keyword', help='delimited list input', type=str, required=False)
     parser.add_argument(
@@ -51,6 +62,8 @@ def getUserInput():
         '-df', '--destfolder', help='delimited destination folder', type=str, required=False, default="downloads")
     parser.add_argument(
         '-u', '--url', help='search with google image URL', type=str, required=False)
+    parser.add_argument(
+        '-nc', '--no-autoclose', help='stop close driver on program exit', required=False, action='store_true', default=False)
 
     args = parser.parse_args()
     arguments = vars(args)
@@ -68,7 +81,7 @@ def getUserInput():
     if arguments["destfolder"]:
         if not os.path.isdir(os.path.join(ROOT_DIR, arguments["destfolder"])):
             os.mkdir(os.path.join(ROOT_DIR, arguments["destfolder"]))
-    if not arguments["removedupe"]:
+    if not arguments["removedupe"] and not arguments["mode"]:
         arguments["mode"] = 'g'
 
     # normalize user path
@@ -81,68 +94,71 @@ def getUserInput():
 
 def googleScrape(userinput):
 
+    ggldownloader = google_images_download.googleimagesdownload()
+    timeout = 5  # seconds
     arguments = {
-        "keywords": userinput["keyword"],
         "limit": userinput["limit"],
         "print_urls": userinput["print"],
     }
 
-    if userinput["keyword"]:  # input by keyword
-
+    def scapeByKeyword(keyword):
+        arguments["keywords"] = keyword  # array is acceptable
         # let google_images_download do their job by keyword
         ggldownloader = google_images_download.googleimagesdownload()
-        paths = ggldownloader.download(arguments)
+        ggldownloader.download(arguments)
+
+    def scapeByUrl(url):
+        arguments["url"] = url
+        ggldownloader.download(arguments)
+
+    def scapeByFilename(filename):
+        absfilename = os.path.join(userinput["inputfolder"], filename)
+
+        # 1 img to dataurl
+        img_dataurl = image_to_data_url(absfilename)
+
+        # 2 locate to img search
+        driver.get(URL_GOOGLE)
+
+        try:
+            element_present = EC.presence_of_element_located(
+                (By.NAME, 'image_url'))
+            WebDriverWait(driver, timeout).until(element_present)
+        except TimeoutException:
+            print("Loading took too much time!")
+
+        # 3 paste dataurl into searchbox
+        driver.execute_script(
+            "document.getElementsByName('image_url')[0].setAttribute('value', '{}');".format(img_dataurl))
+
+        # 4 search
+        driver.find_element_by_name('image_url').send_keys(Keys.RETURN)
+
+        # 5 get relative img url
+        a_list = driver.find_elements_by_tag_name('a')
+        relimg_url = None
+        for a in a_list:
+            href = a.get_attribute("href")
+            if href and "tbm=isch&sa" in href:
+                relimg_url = href
+                break
+
+        # 6 let google_images_download do their job by img url
+        scapeByUrl(relimg_url)
+
+    if userinput["keyword"]:  # input by keyword
+        scapeByKeyword(userinput["keyword"])
+        print("\nKeyword {} scraping have been done".format(
+            userinput["keyword"]))
 
     elif userinput["url"]:  # input by url
-
-        arguments["url"] = userinput["url"]
-        paths = ggldownloader.download(arguments)
+        scapeByUrl(userinput["url"])
         print("\nUrl {} scraping have been done".format(userinput["url"]))
 
     elif userinput["inputfolder"]:  # input by whole img inside input folder
-
-        timeout = 5  # seconds
-
         for filename in os.listdir(userinput["inputfolder"]):
-
-            absfilename = os.path.join(userinput["inputfolder"], filename)
-
-            # 1 img to dataurl
-            img_dataurl = image_to_data_url(absfilename)
-
-            # 2 locate to img search
-            driver.get(URL_GOOGLE)
-
-            try:
-                element_present = EC.presence_of_element_located(
-                    (By.NAME, 'image_url'))
-                WebDriverWait(driver, timeout).until(element_present)
-            except TimeoutException:
-                print("Loading took too much time!")
-
-            # 3 paste dataurl into searchbox
-            driver.execute_script(
-                "document.getElementsByName('image_url')[0].setAttribute('value', '{}');".format(img_dataurl))
-
-            # 4 search
-            driver.find_element_by_name('image_url').send_keys(Keys.RETURN)
-
-            # 5 get relative img url
-            a_list = driver.find_elements_by_tag_name('a')
-            relimg_url = None
-            for a in a_list:
-                href = a.get_attribute("href")
-                if href and "tbm=isch&sa" in href:
-                    relimg_url = href
-                    break
-
-            # 6 let google_images_download do their job by img url
-            ggldownloader = google_images_download.googleimagesdownload()
-            arguments["url"] = relimg_url
-            paths = ggldownloader.download(arguments)
+            scapeByFilename(filename)
             print("\nImage {} scraping have been done".format(filename))
-
-            # driver.close()
 
     else:
         raise ValueError(
@@ -150,16 +166,121 @@ def googleScrape(userinput):
 
 
 def unsplashScrape(userinput):
-    pass
+
+    timeout = 5  # seconds
+
+    def scapeByKeyword(keyword):
+        url = "https://unsplash.com/s/photos/" + keyword
+        scapeByUrl(url)
+
+    def scapeByFilename(fileame):
+
+        # due the noway to search by images. we have to know what is it by
+        # searching it in google. and get image's name
+
+        # 1 img to dataurl
+        absfilename = os.path.join(userinput["inputfolder"], filename)
+        img_dataurl = image_to_data_url(absfilename)
+
+        # 2 locate to img search
+        driver.get(URL_GOOGLE)
+
+        try:
+            element_present = EC.presence_of_element_located(
+                (By.NAME, 'image_url'))
+            WebDriverWait(driver, timeout).until(element_present)
+        except TimeoutException:
+            print("Loading took too much time!")
+
+        # 3 paste dataurl into searchbox
+        driver.execute_script(
+            "document.getElementsByName('image_url')[0].setAttribute('value', '{}');".format(img_dataurl))
+
+        # 4 search
+        driver.find_element_by_name('image_url').send_keys(Keys.RETURN)
+
+        # 5 get image property name
+        # keyword = driver.find_element_by_xpath(
+        #     '//input[@aria-label="Search"]').get_attribute("value")
+        keyword = driver.find_element_by_name("q").get_attribute("value")
+
+        # 6 let scrape by keyword
+        scapeByKeyword(keyword)
+
+    def scapeByUrl(url):
+        result_folder = os.path.join(
+            ROOT_DIR, userinput["destfolder"], generate_datetimestr())
+        scroll = 1000
+        driver.get(url)
+
+        paths = []
+
+        # 1 keep scrolling until figure load
+        while True:
+            time.sleep(timeout)
+            driver.execute_script("window.scrollBy(0,"+str(scroll)+");")
+
+            # 2 get all img (src contain images.unsplash.com/photo in img tag AND not saved)
+            driver.find_elements_by_tag_name("img")
+            img_elems = driver.find_elements_by_css_selector(
+                "img[src *= 'images.unsplash.com/photo']:not([saved *= 'true'])")
+
+            print(img_elems)
+
+            if len(img_elems) <= 0:
+                break
+
+            # 3 scrape all visible img
+            i = 0
+            for img_elem in img_elems:
+
+                # 4 check if we already saved
+                if img_elem.get_attribute("saved"):
+                    break
+                img_url = img_elem.get_attribute("src").split("?")[0]
+                img_object = requests.get(img_url)
+
+                if not os.path.exists(result_folder):
+                    os.makedirs(result_folder)
+
+                img_name = img_elem.get_attribute("alt").replace(" ", "_")
+                img = Image.open(BytesIO(img_object.content))
+
+                # 5 save img
+                i = i + 1
+                img.save("{}/{}_{}.{}".format(result_folder,
+                                              i, img_name, img.format), img.format)
+
+                # TODO : 6 mark img_elem attr as saved
+                driver.execute_script(
+                    "arguments[0].setAttribute('saved','true')", img_elem)
+
+    if userinput["keyword"]:  # input by keyword
+        scapeByKeyword(userinput["keyword"])
+        print("\nKeyword {} scraping have been done".format(
+            userinput["keyword"]))
+
+    elif userinput["url"]:  # input by url
+        scapeByUrl(userinput["url"])
+        print("\nUrl {} scraping have been done".format(userinput["url"]))
+
+    elif userinput["inputfolder"]:  # input by whole img inside input folder
+        for filename in os.listdir(userinput["inputfolder"]):
+            scapeByFilename(filename)
+            print("\nImage {} scraping have been done".format(filename))
+
+    else:
+        raise ValueError(
+            'None of keyword, folder or url input found (use --help for more info)')
 
 
 def removeDuplicate(userinput):
 
     downloadfolder = os.path.join(ROOT_DIR, userinput["destfolder"])
+    dupefound = 0
 
     hash_keys = dict()
-    # listdir('.') = current directory
-    for root, dirs, files in os.walk(downloadfolder, topdown=False):
+    for root, _, files in os.walk(downloadfolder, topdown=False):
         for name in files:
             relfile = os.path.relpath(os.path.join(root, name), ROOT_DIR)
             with open(relfile, 'rb') as f:
@@ -170,22 +291,33 @@ def removeDuplicate(userinput):
                 print("Duplicate found : \n\t{}\n\t{}".format(
                     hash_keys[filehash], relfile))
                 os.remove(relfile)
+                dupefound = dupefound + 1
+    return dupefound
 
 
 def main():
 
     userinput = getUserInput()
 
-    if userinput["mode"] is "g" or userinput["mode"] is "b" or userinput["mode"] is "u":
+    if userinput["mode"] is "g" or userinput["mode"] is "b" or userinput["mode"] is "u":  # both
         global driver
-        driver = webdriver.Chrome(ROOT_DIR + "chromedriver.exe")
+        try:
+            driver = webdriver.Chrome(ROOT_DIR + "chromedriver.exe")
 
-    if userinput["mode"] is "g" or userinput["mode"] is "b":  # google
-        googleScrape(userinput)
-    if userinput["mode"] is "u" or userinput["mode"] is "b":  # unsplash
-        pass
-    if userinput["removedupe"]:
-        removeDuplicate(userinput)
+            if userinput["mode"] is "g" or userinput["mode"] is "b":  # google
+                googleScrape(userinput)
+            if userinput["mode"] is "u" or userinput["mode"] is "b":  # unsplash
+                unsplashScrape(userinput)
+
+        finally:
+            if not userinput["no_autoclose"]:
+                driver.close()
+
+    if userinput["removedupe"]:  # remove duplication files
+        dupefound = removeDuplicate(userinput)
+        if not dupefound:
+            print("No Duplication files found in {}.".format(
+                userinput["destfolder"]))
 
 
 if __name__ == "__main__":
