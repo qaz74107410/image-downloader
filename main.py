@@ -311,14 +311,14 @@ def main():
 
     userinput = getUserInput()
 
-    if userinput["mode"] is "g" or userinput["mode"] is "u":  # both
+    if userinput["mode"] == "g" or userinput["mode"] == "u":  # both
         global driver
         try:
             driver = webdriver.Chrome(ROOT_DIR + "chromedriver.exe")
 
-            if userinput["mode"] is "g":  # google
+            if userinput["mode"] == "g":  # google
                 googleScrape(userinput)
-            if userinput["mode"] is "u":  # unsplash
+            if userinput["mode"] == "u":  # unsplash
                 unsplashScrape(userinput)
 
         finally:
