@@ -75,16 +75,16 @@ def getUserInput():
     if arguments["limit"] <= 0:
         raise ValueError('Limit must greater then 0')
     if not arguments["keyword"] and not arguments["url"]:
-        if arguments["inputfolder"]:
-            if not os.path.isdir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
-                raise ValueError('Input folder {} is not a folder'.format(
-                    os.path.join(ROOT_DIR, arguments["inputfolder"])))
-            elif not does_file_exist_in_dir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
-                raise ValueError('Input folder {} not contain any files'.format(
-                    os.path.join(ROOT_DIR, arguments["inputfolder"])))
-    if arguments["destfolder"]:
-        if not os.path.isdir(os.path.join(ROOT_DIR, arguments["destfolder"])):
-            os.mkdir(os.path.join(ROOT_DIR, arguments["destfolder"]))
+        # if arguments["inputfolder"]:
+        if not os.path.isdir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
+            raise ValueError('Input folder {} is not a folder'.format(
+                os.path.join(ROOT_DIR, arguments["inputfolder"])))
+        elif not does_file_exist_in_dir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
+            raise ValueError('Input folder {} not contain any files'.format(
+                os.path.join(ROOT_DIR, arguments["inputfolder"])))
+    # if arguments["destfolder"]:
+    if not os.path.isdir(os.path.join(ROOT_DIR, arguments["destfolder"])):
+        os.mkdir(os.path.join(ROOT_DIR, arguments["destfolder"]))
     if not arguments["removedupe"] and not arguments["mode"]:
         arguments["mode"] = 'g'
 
@@ -104,12 +104,13 @@ def googleScrape(userinput):
         "limit": userinput["limit"],
         "print_urls": userinput["print"],
         "chromedriver": userinput["chromedriver"],
+        "output_directory": userinput["destfolder"], # default downloads
+        # "image_directory": userinput["destfolder"], # default images name
     }
 
     def scapeByKeyword(keyword):
         arguments["keywords"] = keyword  # array is acceptable
         # let google_images_download do their job by keyword
-        ggldownloader = google_images_download.googleimagesdownload()
         ggldownloader.download(arguments)
 
     def scapeByUrl(url):
@@ -122,8 +123,7 @@ def googleScrape(userinput):
         # default define as filename if exist
         with open(absfilename, 'rb') as f:
             if not userinput.get("image_directory"):
-                arguments["image_directory"] = f.name.split(
-                    '/')[-1].split('.')[0]
+                arguments["image_directory"] = os.path.splitext(os.path.basename(f.name))[0]
         print(arguments)
 
         # 1 img to dataurl
@@ -314,7 +314,7 @@ def main():
     if userinput["mode"] == "g" or userinput["mode"] == "u":  # both
         global driver
         try:
-            driver = webdriver.Chrome(ROOT_DIR + "chromedriver.exe")
+            driver = webdriver.Chrome(os.path.join(ROOT_DIR, "chromedriver.exe"))
 
             if userinput["mode"] == "g":  # google
                 googleScrape(userinput)
