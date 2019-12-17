@@ -17,7 +17,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-from google_images_download import google_images_download  # importing the library
+from google_images_download import google_images_download
 
 URL_GOOGLE = "https://www.google.com/imghp?sbi=1"
 URL_UNSPLASH = "https://unsplash.com"
@@ -51,7 +51,7 @@ def getUserInput():
     parser.add_argument(
         '-rd', '--removedupe', help='remove duplicate images', required=False, action='store_true')
     parser.add_argument(
-        '-m', '--mode', help='which site to download (google, unsplash, both)', required=False, choices=['g', 'u', 'b'])
+        '-m', '--mode', help='which site to download from google:g or unsplash:u (default=g)', required=False, choices=['g', 'u'])
     parser.add_argument(
         '-k', '--keyword', help='delimited list input', type=str, required=False)
     parser.add_argument(
@@ -64,6 +64,10 @@ def getUserInput():
         '-u', '--url', help='search with google image URL', type=str, required=False)
     parser.add_argument(
         '-nc', '--no-autoclose', help='stop close driver on program exit', required=False, action='store_true', default=False)
+    parser.add_argument(
+        '-cd', '--chromedriver', help='specify the path to chromedriver executable in your local machine', type=str, required=False, default=ROOT_DIR + "chromedriver.exe")
+    parser.add_argument(
+        '-i', '--image_directory', help='download images in a specific sub-directory', type=str, required=False)
 
     args = parser.parse_args()
     arguments = vars(args)
@@ -99,6 +103,7 @@ def googleScrape(userinput):
     arguments = {
         "limit": userinput["limit"],
         "print_urls": userinput["print"],
+        "chromedriver": userinput["chromedriver"],
     }
 
     def scapeByKeyword(keyword):
@@ -113,6 +118,13 @@ def googleScrape(userinput):
 
     def scapeByFilename(filename):
         absfilename = os.path.join(userinput["inputfolder"], filename)
+
+        # default define as filename if exist
+        with open(absfilename, 'rb') as f:
+            if not userinput.get("image_directory"):
+                arguments["image_directory"] = f.name.split(
+                    '/')[-1].split('.')[0]
+        print(arguments)
 
         # 1 img to dataurl
         img_dataurl = image_to_data_url(absfilename)
@@ -299,14 +311,14 @@ def main():
 
     userinput = getUserInput()
 
-    if userinput["mode"] is "g" or userinput["mode"] is "b" or userinput["mode"] is "u":  # both
+    if userinput["mode"] is "g" or userinput["mode"] is "u":  # both
         global driver
         try:
             driver = webdriver.Chrome(ROOT_DIR + "chromedriver.exe")
 
-            if userinput["mode"] is "g" or userinput["mode"] is "b":  # google
+            if userinput["mode"] is "g":  # google
                 googleScrape(userinput)
-            if userinput["mode"] is "u" or userinput["mode"] is "b":  # unsplash
+            if userinput["mode"] is "u":  # unsplash
                 unsplashScrape(userinput)
 
         finally:
