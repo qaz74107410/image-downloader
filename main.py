@@ -51,7 +51,7 @@ def getUserInput():
     parser.add_argument(
         '-rd', '--removedupe', help='remove duplicate images', required=False, action='store_true')
     parser.add_argument(
-        '-m', '--mode', help='which site to download from google:g or unsplash:u (default=g)', required=False, choices=['g', 'u'])
+        '-m', '--mode', help='which site to download from google:g or unsplash:u (default=g)', required=False, choices=['g', 'u', 'google', 'unsplash'])
     parser.add_argument(
         '-k', '--keyword', help='delimited list input', type=str, required=False)
     parser.add_argument(
@@ -65,6 +65,8 @@ def getUserInput():
     parser.add_argument(
         '-nc', '--no-autoclose', help='stop close driver on program exit', required=False, action='store_true', default=False)
     parser.add_argument(
+        '-c', '--count', help='count images in desination folder', required=False, action='store_true', default=False)
+    parser.add_argument(
         '-cd', '--chromedriver', help='specify the path to chromedriver executable in your local machine', type=str, required=False, default=ROOT_DIR + "chromedriver.exe")
     parser.add_argument(
         '-i', '--image_directory', help='download images in a specific sub-directory', type=str, required=False)
@@ -75,18 +77,20 @@ def getUserInput():
     if arguments["limit"] <= 0:
         raise ValueError('Limit must greater then 0')
     if not arguments["keyword"] and not arguments["url"]:
-        # if arguments["inputfolder"]:
         if not os.path.isdir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
             raise ValueError('Input folder {} is not a folder'.format(
                 os.path.join(ROOT_DIR, arguments["inputfolder"])))
         elif not does_file_exist_in_dir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
             raise ValueError('Input folder {} not contain any files'.format(
                 os.path.join(ROOT_DIR, arguments["inputfolder"])))
-    # if arguments["destfolder"]:
     if not os.path.isdir(os.path.join(ROOT_DIR, arguments["destfolder"])):
         os.mkdir(os.path.join(ROOT_DIR, arguments["destfolder"]))
     if not arguments["removedupe"] and not arguments["mode"]:
         arguments["mode"] = 'g'
+    if arguments["mode"] == 'google' :
+        arguments["mode"] = 'g'
+    elif arguments["mode"] = 'unsplash' :
+        arguments["mode"] = 'unsplash'
 
     # normalize user path
     arguments["inputfolder"] = os.path.join(
@@ -307,19 +311,32 @@ def removeDuplicate(userinput):
     return dupefound
 
 
+def countFiles(path):
+    return sum([len(files) for r, d, files in os.walk(path)])
+
+
 def main():
 
     userinput = getUserInput()
 
+    # count files in directory and sub-directory 
+    if userinput["count"]:
+        lenfile = countFiles(userinput["destfolder"])
+        print("Files total in '{}' : \n\t{}".format(userinput["destfolder"], lenfile))
+        return True
+
+    # define driver (browser)
     if userinput["mode"] == "g" or userinput["mode"] == "u":  # both
         global driver
         try:
             driver = webdriver.Chrome(os.path.join(ROOT_DIR, "chromedriver.exe"))
 
+            # scrape things from ..
             if userinput["mode"] == "g":  # google
                 googleScrape(userinput)
             if userinput["mode"] == "u":  # unsplash
                 unsplashScrape(userinput)
+        return True
 
         finally:
             if not userinput["no_autoclose"]:
@@ -330,6 +347,7 @@ def main():
         if not dupefound:
             print("No Duplication files found in {}.".format(
                 userinput["destfolder"]))
+        return True
 
 
 if __name__ == "__main__":
