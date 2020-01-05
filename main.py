@@ -2,6 +2,7 @@ import os
 import argparse
 import base64
 import time
+import sys
 import requests
 
 import hashlib
@@ -70,6 +71,11 @@ def getUserInput():
         '-cd', '--chromedriver', help='specify the path to chromedriver executable in your local machine', type=str, required=False, default=ROOT_DIR + "chromedriver.exe")
     parser.add_argument(
         '-i', '--image_directory', help='download images in a specific sub-directory', type=str, required=False)
+
+    # show --help if no args parse
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
     args = parser.parse_args()
     arguments = vars(args)
