@@ -25,6 +25,8 @@ URL_UNSPLASH = "https://unsplash.com"
 
 ROOT_DIR = os.path.join(os.getcwd(), "")
 
+PROG_NAME = 'imgdownloader'
+
 
 def image_to_data_url(filename):
     ext = filename.split('.')[-1]
@@ -38,15 +40,78 @@ def generate_datetimestr():
     return datetime.now().strftime("%Y-%m-%d %H_%M_%S")
 
 
+def showExample():
+    print("\nExample of arguments")
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--mode google --inputfolder input --destfolder download',
+        PROG_NAME,
+        '--m g --if input --df download',
+        'download images to "./download" from google by using images inside "./input"'
+    ))
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--mode google --inputfolder input --destfolder download --limit 10',
+        PROG_NAME,
+        '--m g --if input --df download -l 10',
+        'download images to "./download" from google by using images inside "./input" but limit only 10 images'
+    ))
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--mode google --inputfolder input --destfolder download --removedupe',
+        PROG_NAME,
+        '--m g --if input --df download -rd',
+        'download images to "./download" from google by using images inside "./input" and remove duplicate files after download'
+    ))
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--mode google --keyword "cat" --destfolder download --removedupe',
+        PROG_NAME,
+        '--m g -k "cat" --df download -rd',
+        'download images to "./download" from google by using keyword "cat" and remove duplicate files after download'
+    ))
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--mode unsplash --keyword "cat" --destfolder download',
+        PROG_NAME,
+        '--m u -k "cat" --df download',
+        'download images to "./download" from unsplash by using keyword "cat" and remove duplicate files after download'
+    ))
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--destfolder download --removedupe',
+        PROG_NAME,
+        '--df download -rd',
+        'remove duplicate files inside "./download"'
+    ))
+
+    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+        PROG_NAME,
+        '--destfolder download --count',
+        PROG_NAME,
+        '--df download -c',
+        'count files inside "./download"'
+    ))
+
+
 def getUserInput():
 
     def does_file_exist_in_dir(path):
         return len(os.listdir(path)) > 0
 
     parser = argparse.ArgumentParser(
-        prog='imgdownloader',
+        prog=PROG_NAME,
         # usage='%(prog)s [options]',
-        description='Image downloader for googleimage and unsplash website.')
+        description='''
+            Image downloader for googleimage and unsplash website.
+            Arguments order and acronym are not necessary
+            ''')
     parser.add_argument(
         '-p', '--print', help='print the URLs of the images', required=False, action='store_true')
     parser.add_argument(
@@ -56,11 +121,13 @@ def getUserInput():
     parser.add_argument(
         '-k', '--keyword', help='delimited list input', type=str, required=False)
     parser.add_argument(
-        '-l', '--limit', help='limit the download count', type=int, required=False, default=10)
+        '-l', '--limit', help='limit the download count (default=10)', type=int, required=False, default=10)
     parser.add_argument(
         '-if', '--inputfolder', help='delimited input folder', type=str, required=False, default="inputs")
     parser.add_argument(
         '-df', '--destfolder', help='delimited destination folder', type=str, required=False, default="downloads")
+    parser.add_argument(
+        '-e', '--example', help='show example commands', required=False, action='store_true', default=False)
     parser.add_argument(
         '-u', '--url', help='search with google image URL', type=str, required=False)
     parser.add_argument(
@@ -80,9 +147,13 @@ def getUserInput():
     args = parser.parse_args()
     arguments = vars(args)
 
+    # show --example
+    if arguments["example"]:
+        showExample()
+        sys.exit(1)
     if arguments["limit"] <= 0:
         raise ValueError('Limit must greater then 0')
-    if not arguments["keyword"] and not arguments["url"]:
+    if not arguments["keyword"] and not arguments["url"] and not arguments["removedupe"] and not arguments["count"]:
         if not os.path.isdir(os.path.join(ROOT_DIR, arguments["inputfolder"])):
             raise ValueError('Input folder {} is not a folder'.format(
                 os.path.join(ROOT_DIR, arguments["inputfolder"])))
