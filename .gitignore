@@ -1,5 +1,7 @@
 /env
 /inputs
 /downloads
+.vscode
 /.vscode
 test.py
+chromedriver
