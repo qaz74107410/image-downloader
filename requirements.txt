@@ -1,0 +1,5 @@
+urllib3==1.25.7
+selenium==3.141.0
+git+https://github.com/Joeclinton1/google-images-download.git
+requests==2.22.0
+Pillow

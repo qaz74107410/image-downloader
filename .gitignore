@@ -1,0 +1,11 @@
+/env
+/inputs
+/downloads
+.vscode
+/.vscode
+test.py
+chromedriver
+chromedriver.exe
+/Scripts
+/Lib
+/Include
