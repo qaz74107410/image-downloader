@@ -43,7 +43,7 @@ def generate_datetimestr():
 def showExample():
     print("\nExample of arguments")
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--mode google --inputfolder input --destfolder download',
         PROG_NAME,
@@ -51,7 +51,7 @@ def showExample():
         'download images to "./download" from google by using images inside "./input"'
     ))
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--mode google --inputfolder input --destfolder download --limit 10',
         PROG_NAME,
@@ -59,7 +59,7 @@ def showExample():
         'download images to "./download" from google by using images inside "./input" but limit only 10 images'
     ))
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--mode google --inputfolder input --destfolder download --removedupe',
         PROG_NAME,
@@ -67,7 +67,7 @@ def showExample():
         'download images to "./download" from google by using images inside "./input" and remove duplicate files after download'
     ))
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--mode google --keyword "cat" --destfolder download --removedupe',
         PROG_NAME,
@@ -75,7 +75,7 @@ def showExample():
         'download images to "./download" from google by using keyword "cat" and remove duplicate files after download'
     ))
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--mode unsplash --keyword "cat" --destfolder download',
         PROG_NAME,
@@ -83,7 +83,7 @@ def showExample():
         'download images to "./download" from unsplash by using keyword "cat" and remove duplicate files after download'
     ))
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--destfolder download --removedupe',
         PROG_NAME,
@@ -91,7 +91,7 @@ def showExample():
         'remove duplicate files inside "./download"'
     ))
 
-    print("\n  python {} {}\n  python {} {}\n\t: {}".format(
+    print("\n  python {}.py {}\n  python {}.py {}\n\t: {}".format(
         PROG_NAME,
         '--destfolder download --count',
         PROG_NAME,
